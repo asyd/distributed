@@ -60,7 +60,18 @@ no_value = '--no-value-sentinel--'
 
 try:
     import psutil
+    import platform
     TOTAL_MEMORY = psutil.virtual_memory().total
+    # Check for cgroup limitation
+    if platform.system() == 'Linux':
+        try:
+            with open('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'r') as fh:
+                cgroup_limit = int(fh.readline().strip())
+            if TOTAL_MEMORY - cgroup_limit > 0:
+                TOTAL_MEMORY = cgroup_limit
+        except IOError:
+            pass
+
 except ImportError:
     logger.warning("Please install psutil to estimate worker memory use")
     TOTAL_MEMORY = 8e9
